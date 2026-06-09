@@ -21,11 +21,16 @@ Ask *"what should I work on next?"* and most tools hand you a flat list. `next-i
 - **AI recommended route** — a lightweight top-left note with an ordered breadcrumb (`#210 → #211 → …`), plus a **▶ start-here** flag pinned to the top pick on the canvas.
 - **Business-line "unlock" panel** — per line: a status progress bar, the **feature it delivers** once complete, and the **next actionable issue** (or what's blocking it).
 - **Infinite canvas** — hold <kbd>Space</kbd> + drag to pan, scroll to zoom, *fit* / *reset*; hover a node to light up its full upstream+downstream path, hover a line to highlight the whole chain.
+- **Light / dark + English / 中文** — flip theme and UI language right from the toolbar; your choice is remembered.
 - **Self-contained** — one HTML file, no network, no build step. Keep it, share it, drop it in a PR.
 
 The point it exists to make: **"finish this chain of issues → ship this feature."**
 
 ![the interactive map](docs/preview-map.png)
+
+<sub>Light & dark, English & 中文 — toggled from the toolbar:</sub>
+
+![dark mode](docs/preview-dark.png)
 
 ## What else it does
 
