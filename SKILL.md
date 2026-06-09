@@ -71,8 +71,8 @@ by hand using the model below.
   issues they block). Each entry carries a `reason` and an **`order_basis`** that
   tells you *why* it sits there — trust it accordingly:
   - `dependency` — forced after a hard `Blocked by`. Real, keep it.
-  - `soft-sync` — placed by a body sync note (e.g. "#183 waits until #184 publishes
-    its skeleton"); the `sync_note` field has the text. Real, and worth surfacing.
+  - `soft-sync` — placed by a body sync note (e.g. "#205 waits until #221 publishes
+    its email templates"); the `sync_note` field has the text. Real, and worth surfacing.
   - `tie` — **arbitrary**. Same priority, no hard or soft signal, so the script
     fell back to issue number. This is NOT a meaningful order. When two `tie`
     items sit next to each other, read their bodies and reorder by actual leverage
@@ -110,8 +110,8 @@ from a label prefix or a PRD/design umbrella). Two things are left that only you
 can do, and they're what make the map worth looking at:
 
 1. **Cluster the leftovers.** Every issue with `business_line: null` needs a home.
-   Read its title/body and group by the *feature it serves* — an ADR reference
-   ("ADR-0016 ①层"), a "Goal X / Bn" tag, a shared subsystem or command, a common
+   Read its title/body and group by the *feature it serves* — an epic or ADR
+   reference, a "Phase 2 / Mn" milestone tag, a shared service or command, a common
    user-facing capability are all good seeds. Issues the script grouped by PRD are
    usually fine as-is; you can rename a lane to the feature it delivers rather than
    the raw PRD title if that reads clearer.
@@ -125,14 +125,17 @@ so write it unless the user only wants the bare dependency picture.
 
 ```json
 {
-  "headline": "先推 #182 链：它是生成端重写的伞，#226 范例库可并行起爆",
-  "order_note": "#99 跨竞品验证等 B2–B5 落地，最后做；#161 是独立缺陷，随时插队",
+  "headline": "Start with #202 (cart service) — it's in progress and unblocks the whole checkout chain; #203 can run in parallel.",
+  "order_note": "Search (#210→#212) and Notifications (#220→#222) are independent tracks; #205 order-emails softly waits on #221 templates; triage #230 first; #240 is blocked on legal sign-off.",
   "business_lines": [
-    {"name": "第一稿阅读吸引力（生成端重写）", "issues": [182, 188],
-     "unlock": "大纲→吸引人正文的全链路重写 + A/B dogfood 验收"},
-    {"name": "范例库致冷链（ADR-0016 ①层）", "issues": [226], "source": "label",
-     "unlock": "补热范例入 corpus → chapter-writer 不再写成冷淡克制"},
-    {"name": "独立缺陷", "issues": [161], "unlock": ""}
+    {"name": "Checkout revamp", "issues": [201, 202, 203, 204, 205, 206],
+     "unlock": "Ship one-click checkout end to end: cart → payment → confirmation → A/B"},
+    {"name": "Search relevance", "issues": [210, 211, 212],
+     "unlock": "Relevant search from ingestion → ranking → new results UI"},
+    {"name": "Notifications", "issues": [220, 221, 222],
+     "unlock": "One fan-out service powering transactional email + web push"},
+    {"name": "Platform stability", "issues": [230], "unlock": "Kill the Safari login 500 blocking sign-ins"},
+    {"name": "Compliance", "issues": [240], "unlock": "GDPR data-export endpoint (gated on legal sign-off)"}
   ]
 }
 ```
@@ -196,25 +199,26 @@ with what's actionable, point at the map, and stop:
 ## 🟢 可直接推进（已规约、依赖已清）
 | # | 标题 | label | 备注 |
 |---|------|-------|------|
-| 184 | Rebuild novel-craft … | ready-for-agent | 有验收清单 |
-| 183 | Rewrite chapter-writer … | ready-for-agent | 软同步点：craft 引用待 #184 骨架 |
+| 202 | Refactor cart into a stateless service | ready-for-agent | 进行中；解锁 #204 |
+| 203 | Integrate new payment-provider SDK | ready-for-agent | 与 #202 并行 |
+| 210 | Search ingestion pipeline v2 | ready-for-agent | 独立链根 |
 
 ## ⛔ 被阻塞（依赖未完成）
 | # | 标题 | 阻塞于 | 解锁条件 |
 |---|------|--------|----------|
-| 185 | Convert /write dispatch … | #183 | #183 合并后即可启动 |
-| 188 | A/B dogfood … | #183 #184 #185 #186 | 整条链收尾后 |
+| 204 | Rebuild checkout as one-page flow | #202 #203 | 两者合并后启动 |
+| 205 | Order-confirmation emails | #204 | 且软等 #221 模板 |
 
 ## 🟡 未就绪（需先 triage）
 | # | 标题 | 状态 |
 |---|------|------|
-| 161 | plan 首跑 400 错误 | 无 triage label，bug，先 triage |
+| 230 | Login 500 on Safari 17 | 无 triage label，bug，先 triage |
 
 ## 推荐执行顺序
-1. **#184** — ready-for-agent，无依赖，且 #183/#185 都等它的 craft 骨架，先做收益最大
-2. **#183** — ready-for-agent，可与 #184 并行起草，引用接线点等 #184
-3. **#185 → #186/#187 → #188** — 依次随 #183 解锁
-> #182 是 PRD 伞，不单独"实施"——它统领 #183–#188，做完子项即闭环。
+1. **#202** — 进行中、解锁整条 checkout 链，先做收益最大；#203 可并行
+2. **#210 / #220** — 搜索、通知两条独立链的根，可并行起爆
+3. **#204 → #205 → #206** — 依次随 #202/#203 解锁（#205 另软等 #221 模板）
+> #201 是 PRD 伞，不单独"实施"——它统领 #202–#206，做完子项即闭环；#240 被 blocked，#230 先 triage。
 
 ## ⚠️ 注意
 - <循环依赖 / wontfix 排除 / 用了默认 label 映射 等 warnings>
@@ -237,7 +241,7 @@ surface the note in the 备注 column so the user sees the coordination point.
 
 ### 3. Clarity gate — when the user picks an issue to advance
 
-When the user names a specific issue ("能直接做 #184 吗？" / "我想开始做 #123"),
+When the user names a specific issue ("能直接做 #204 吗？" / "我想开始做 #240"),
 your job is **not** to stamp a go/no-go verdict. It's to map the issue into two
 buckets — **已经定了、可以照着做** vs **还没定、现在做会返工** — with real rigour,
 then hand the second bucket to `grill-with-docs`.
@@ -266,8 +270,8 @@ largely to get them right:
   yes/no; you owe them an accurate clarity map and a clean hand-off.
 - **Don't rationalise a real *what*-gap as "implementation discretion."** An
   acceptance criterion with no decidable boundary — "大幅压缩" with no target,
-  "更新所有引用" without saying which files count, "围绕生成动作组织" without the
-  heading list — is a *what*-gap to clarify, not a *how*-choice to wave through.
+  "更新所有引用" without saying which files count, "重构成模块化" without the
+  module list — is a *what*-gap to clarify, not a *how*-choice to wave through.
   When unsure which it is, treat it as *what* and route it. A `ready-for-agent`
   label means triage *thought* it was AFK-ready — a strong prior, not a free pass.
   Verify independently; catching a gap triage missed is exactly the point.
@@ -276,10 +280,10 @@ The hand-off is a sharp seed for the grill-with-docs session — the specific
 undecided points, why each would cause rework, and one line saying you won't
 decide them yourself:
 
-> #123 大方向是个设计议题、还没拍板，现在动 `commands/world.md` 会返工。还没定的点：
-> 1. 是否需要渐进式引导（issue 列了正反论据，没结论）
-> 2. 流程粒度按操作类型 / +复杂度阈值 / 用户 flag 哪种切（三个候选未选）
-> 3. 每步答案如何映射回 schema 字段、与 world-curator 的职责边界
+> #204 大方向是个设计议题、还没拍板，现在动 `app/checkout/` 会返工。还没定的点：
+> 1. 是否支持游客结账（issue 列了正反论据，没结论）
+> 2. 支付流程按单页全展开 / 分步向导 / 按金额阈值切（三个候选未选）
+> 3. 地址自动补全用哪家服务、与现有 order schema 字段如何映射
 > 建议先过一轮 **grill-with-docs** 把这些逐个敲定——它会顺手锁术语、更新
 > CONTEXT.md/ADR，定了再 `to-issues` 拆可执行子任务。这几个决策我不替你拍。
 
@@ -295,12 +299,12 @@ hand-off.
 
 ## The dependency model (how the script reads issues)
 
-- **`Blocked by` list items** (`- #183`) → hard edges; the blocker must precede
+- **`Blocked by` list items** (`- #202`) → hard edges; the blocker must precede
   the dependent. The recommended order respects these.
 - **`blocked` label** → blocked, even when the body names no specific issue
   (e.g. prose like "## 阻塞链: 等 B2+B3 落地"). Shown as blocked with
   "blocker unspecified".
-- **`Parent: #182`** → grouping only, **not** a dependency. A child of a PRD is
+- **`Parent: #201`** → grouping only, **not** a dependency. A child of a PRD is
   not blocked by the PRD; it's blocked only by its own `Blocked by` refs. This is
   why several siblings under one PRD can all be `ready_now`.
 - **Closed blockers auto-clear** — the script only fetches open issues, so a

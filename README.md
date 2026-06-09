@@ -1,8 +1,10 @@
+<p align="center">
+  <img src="docs/hero.png" alt="NEXT-ISSUES" width="100%">
+</p>
+
 # next-issue
 
 **A Claude Code skill that turns your repo's open GitHub issues into a clear plan — and draws it as an interactive HTML map.** It surveys the open issues, ranks them by triage state and dependency graph, tells you what to work on next, and renders the whole backlog as a self-contained **business-line & unlock map** you can pan, zoom, and share.
-
-![next-issue map](docs/preview-map.png)
 
 > Following the cables left → right *is* the implementation path. Each node is an issue; each business line is a colour; the side panel spells out **what shipping each line actually delivers**.
 
@@ -22,6 +24,8 @@ Ask *"what should I work on next?"* and most tools hand you a flat list. `next-i
 - **Self-contained** — one HTML file, no network, no build step. Keep it, share it, drop it in a PR.
 
 The point it exists to make: **"finish this chain of issues → ship this feature."**
+
+![the interactive map](docs/preview-map.png)
 
 ## What else it does
 
@@ -62,11 +66,20 @@ Annotations are optional — without them you still get a valid map grouped by l
 
 `next-issue` is a Claude Code skill — this repo **is** the skill.
 
+**Option A — download the packaged skill** (easiest): grab `next-issue.skill` from the [latest release](https://github.com/pantsbang-yannik/next-issues/releases/latest) and install it:
+
+```bash
+# a .skill is a zip — unpack it into your skills directory
+unzip next-issue.skill -d ~/.claude/skills/
+```
+
+**Option B — clone the repo** straight into your skills directory:
+
 ```bash
 git clone https://github.com/pantsbang-yannik/next-issues.git ~/.claude/skills/next-issue
 ```
 
-Then just talk to Claude Code naturally — *"what should I work on next?"*, *"sort the backlog by priority and dependencies"*, *"draw the issues and business lines as a map"*, *"can I start #123 yet?"* — and the skill triggers. (`~/.claude/skills/` is the usual personal-skills directory; adjust to your runtime.)
+Then just talk to Claude Code naturally — *"what should I work on next?"*, *"sort the backlog by priority and dependencies"*, *"draw the issues and business lines as a map"*, *"can I start #204 yet?"* — and the skill triggers. (`~/.claude/skills/` is the usual personal-skills directory; adjust to your runtime.)
 
 ## Requirements
 

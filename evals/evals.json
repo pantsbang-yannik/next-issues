@@ -1,29 +1,31 @@
 {
   "skill_name": "next-issue",
+  "_note": "Generic, repo-agnostic sample cases. Run against any repo whose open issues use the five canonical triage roles (see docs/agents/triage-labels.md). Expectations are behaviour-based, not tied to specific issue numbers.",
   "evals": [
     {
       "id": 0,
       "name": "board-list-and-prioritize",
-      "prompt": "帮我看下 NarraCat 现在有哪些没解决的 issue，按优先级和依赖关系排一排，我想知道接下来先推进哪个最合理。",
-      "expected_output": "拉取 open issues，分出可直接推进/被阻塞/未就绪三组（emoji 标注）；给出尊重依赖的拓扑执行顺序，#184/#183 在前、#185→#188 随 #183 解锁；识别 #182 为 PRD 伞不单独实施；不擅自开始实现任何 issue。",
+      "prompt": "帮我看下现在仓库有哪些没解决的 issue，按优先级和依赖关系排一排，我想知道接下来先推进哪个最合理。",
+      "expected_output": "拉取 open issues，分出可直接推进/被阻塞/未就绪三组（emoji 标注）；给出尊重依赖的拓扑执行顺序（硬依赖在前、被解锁项随其上游解锁）；正确处理 closed blocker 自动清除、PRD 伞不单独实施、软同步非硬阻塞；不擅自开始实现任何 issue。",
       "files": [],
       "expectations": [
-        "拉取实时 open issues（覆盖 #182 链 + #161/#99/#123）",
+        "拉取实时 open issues",
         "分 可推进/被阻塞/未就绪 三类（emoji 分组）",
-        "依赖有效的执行顺序（#184/#183 前，#185–187 随 #183，#188 末）",
-        "标 #182 为 PRD 伞不单独实施",
-        "未把 #183 误判为被 #184 硬阻塞（软同步）",
-        "停在建议层不改文件/issue"
+        "依赖有效的执行顺序（无被阻塞项排在其阻塞者之前）",
+        "正确识别 PRD/伞 issue 不单独实施",
+        "已 closed 的 blocker 不再算阻塞；正文软同步不当硬阻塞",
+        "未就绪/无 triage label 的 issue 标为先 triage，不编造优先级",
+        "停在建议层，不改文件/issue"
       ]
     },
     {
       "id": 1,
       "name": "clarity-gate-route-to-grill",
-      "prompt": "我打算开始做 #123 那个 world 命令渐进式引导重设计，直接开干没问题吧？",
-      "expected_output": "读 #123，识别为含多个未决 brainstorm 决策点、被 blocked 的 design 议题，判定不能直接执行；建议先走 grill-with-docs 并列出具体未决点；不自己开始拷问、不实现；聚焦该 issue，不在末尾重贴整块看板（至多一行回指）。",
+      "prompt": "我打算开始做 #204 那个 checkout UI 重设计，直接开干没问题吧？",
+      "expected_output": "读该 issue，识别为含多个未决设计决策点的议题，判定不能直接执行；建议先走 grill-with-docs 并列出具体未决点；不自己开始拷问、不实现；聚焦该 issue，不在末尾重贴整块看板（至多一行回指）。",
       "files": [],
       "expectations": [
-        "读 #123 识别为未拍板设计议题（决策点，非可实施 spec）",
+        "读该 issue 识别为未拍板设计议题（决策点，非可实施 spec）",
         "判定不可直接执行（整体路由）",
         "明确建议 grill-with-docs",
         "列出具体未决决策点（非泛泛）",
@@ -34,12 +36,12 @@
     {
       "id": 2,
       "name": "clarity-gate-surface-and-route",
-      "prompt": "准备动手 #184 了，这个 issue 描述够清楚能直接开始实现吗？",
-      "expected_output": "严谨读 #184（交叉核对 AC/ADR/代码），把它拆成『已经定了』vs『还没定』两桶——即便是 ready-for-agent，只要有真 what-gap（如骨架未定稿、引用迁移边界、压缩无判据）就指出来；不强行下 go/no-go、不自己拍板解决未定点，把未定点路由到 grill-with-docs；聚焦该 issue 不贴整块看板，不开始实现。",
+      "prompt": "准备动手 #202 了，这个 issue 描述够清楚能直接开始实现吗？",
+      "expected_output": "严谨读该 issue（交叉核对验收标准/ADR/代码），拆成『已经定了』vs『还没定』两桶——即便是 ready-for-agent，只要有真 what-gap（无判据的验收标准、未定的边界）就指出来；不强行下 go/no-go、不自己拍板解决未定点，把未定点路由到 grill-with-docs；聚焦该 issue 不贴整块看板，不开始实现。",
       "files": [],
       "expectations": [
-        "严谨读 #184，指出用户可能没注意到的具体歧义",
-        "拆『清楚 vs 未定』两桶，不强行下简单 go/no-go（非简单绿灯）",
+        "严谨读该 issue，指出用户可能没注意到的具体歧义",
+        "拆『清楚 vs 未定』两桶，不强行下简单 go/no-go",
         "把未定点路由到 grill-with-docs",
         "不自己拍板解决未定点（描述不替用户决定）",
         "不贴整块看板、不实现，停在 hand-off"
@@ -48,15 +50,15 @@
     {
       "id": 3,
       "name": "visual-board-business-lines-and-unlock",
-      "prompt": "帮我把 NarraCat 现在的 issue 画成一张图——我想一眼看清哪些 issue 属于同一条业务线、谁挡着谁，以及完成某条线能交付什么功能。",
-      "expected_output": "运行 issue_board.py 取实时 open issues + 新字段；为没有 label/PRD 信号的 issue（如 #226 ADR-0016、#99 Goal B、#161 独立 bug）做语义业务线聚类并写出『完成这条线→交付X功能』unlock 文案 + headline，存成 annotations JSON；调用 render_board.py 生成自包含 HTML 并 open 打开；HTML 按业务线分泳道、状态着色、画硬/软依赖箭头、每条线有解锁说明；终端只留简短摘要指向地图；不实现任何 issue。",
+      "prompt": "把现在的 issue 关系和业务线画成一张图，我想一眼看清哪些 issue 属于同一条业务线、谁挡着谁，以及完成某条线能交付什么功能。",
+      "expected_output": "运行 issue_board.py 取实时 open issues + 字段；为没有 label/PRD 信号的 issue 做语义业务线聚类并写出『完成这条线→交付X功能』unlock 文案 + headline，存成 annotations JSON；调用 render_board.py 生成自包含 HTML 并 open 打开；HTML 为节点路径图（按依赖深度排）+ 状态着色 + 硬/软依赖连线 + 右侧业务线解锁面板；终端只留简短摘要指向地图；不实现任何 issue。",
       "files": [],
       "expectations": [
         "运行 issue_board.py 取实时 open issues",
-        "为 business_line=null 的 issue 做语义业务线聚类（#226/#99/#161 不堆在一条线）",
+        "为 business_line=null 的 issue 做语义业务线聚类（不堆在一条线）",
         "写出每条业务线的『完成→解锁功能』unlock 文案（非空、具体）",
         "调用 render_board.py 生成自包含 HTML 并打开（open/xdg-open）",
-        "HTML 含业务线泳道 + 状态着色 + 依赖箭头，无外网依赖",
+        "HTML 含节点路径图 + 状态着色 + 依赖连线 + 右侧解锁面板，无外网依赖",
         "终端摘要简短、指向地图，不重贴长报告",
         "停在可视化，不实现 / 不改任何 issue"
       ]
