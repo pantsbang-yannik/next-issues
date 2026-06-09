@@ -28,10 +28,6 @@ The point it exists to make: **"finish this chain of issues → ship this featur
 
 ![the interactive map](docs/preview-map.png)
 
-<sub>Light & dark, English & 中文 — toggled from the toolbar:</sub>
-
-![dark mode](docs/preview-dark.png)
-
 ## What else it does
 
 - **Ranks the board** into _ready now_ / _blocked_ / _not-yet-triaged_, with a topologically valid execution order.
@@ -64,8 +60,6 @@ open /tmp/next-issue-board.html            # xdg-open on Linux
 ```
 
 Annotations are optional — without them you still get a valid map grouped by label / PRD; with them you get the full unlock story.
-
-![full board](docs/preview-full.png)
 
 ## Install
 
