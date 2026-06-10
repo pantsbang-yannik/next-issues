@@ -17,7 +17,8 @@ Ask *"what should I work on next?"* and most tools hand you a flat list. `next-i
 - **Nodes laid out by dependency depth** — root issues on the left, the things they unlock to the right. The connectors are the plan.
 - **Orthogonal dependency cables** — solid = hard dependency (`prerequisite → unlocked`), dashed = soft-sync coordination.
 - **Restrained, meaningful colour** — status is the only saturated colour (🟢 ready · 🔴 blocked · 🟡 needs-triage · 🔵 in-progress); each business line gets one quiet dot. No confetti.
-- **Structured issue cards** — number, title, labels, and grouped `unlocks / blocked-by / soft-after` references.
+- **Structured issue cards** — number, title, labels, assignees, and grouped `unlocks / blocked-by / soft-after` references.
+- **Person-aware** — it detects your `gh` login: your cards get an accent border + **我** badge, and a **只看我的 / Mine** toolbar filter dims everything except your issues and their full upstream/downstream chain.
 - **AI recommended route** — a lightweight top-left note with an ordered breadcrumb (`#210 → #211 → …`), plus a **▶ start-here** flag pinned to the top pick on the canvas.
 - **Business-line "unlock" panel** — per line: a status progress bar, the **feature it delivers** once complete, and the **next actionable issue** (or what's blocking it).
 - **Infinite canvas** — hold <kbd>Space</kbd> + drag to pan, scroll to zoom, *fit* / *reset*; hover a node to light up its full upstream+downstream path, hover a line to highlight the whole chain.

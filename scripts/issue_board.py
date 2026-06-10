@@ -228,6 +228,9 @@ def main():
                     help="comma-separated label prefixes that name a business line (e.g. 'area:writer'). "
                          "The first matching label's suffix becomes business_line. Falls back to the "
                          "PRD/parent umbrella when no such label exists; the caller's AI fills the rest.")
+    ap.add_argument("--viewer", default=None,
+                    help="GitHub login to build the personal view for (default: ask `gh api user`; "
+                         "pass '' to disable the personal view)")
     args = ap.parse_args()
 
     line_prefixes = [p.strip() for p in args.line_label_prefixes.split(",") if p.strip()]
@@ -257,6 +260,14 @@ def main():
         slug_out, _ = run_gh(["repo", "view", "--json", "nameWithOwner", "-q", ".nameWithOwner"])
         repo_slug = slug_out.strip() if slug_out else None
 
+    # Who is looking at the board. Best-effort: no login just means the personal
+    # view (`mine`, `my_board`) is omitted — never a failure.
+    viewer = args.viewer
+    if viewer is None:
+        login_out, _ = run_gh(["api", "user", "-q", ".login"])
+        viewer = login_out.strip() if login_out else None
+    viewer = viewer or None  # '' (explicit opt-out) → None
+
     issues = {}
     for it in raw_issues:
         num = it["number"]
@@ -275,6 +286,7 @@ def main():
             "title": it["title"],
             "labels": labels,
             "assignees": assignees,
+            "mine": bool(viewer) and viewer in assignees,
             "in_progress": bool(assignees),    # someone's on it; render as 进行中
             "role": role,
             "weight": weight,
@@ -304,6 +316,15 @@ def main():
         # Hard unlocks: open issues that list n among their open blockers. This is
         # the "complete n → these become startable" edge the visual board draws.
         issues[n]["unlocks"] = sorted(m for m in issues if n in issues[m]["open_blockers"])
+
+    # Owner-aware echoes of the upstream/downstream refs, so the caller can say
+    # "blocked by #204 — that's @alice's" without another gh round-trip.
+    def brief(nums):
+        return [{"number": m, "title": issues[m]["title"], "assignees": issues[m]["assignees"]}
+                for m in nums if m in issues]
+    for n in issues:
+        issues[n]["open_blockers_detail"] = brief(issues[n]["open_blockers"])
+        issues[n]["unlocks_detail"] = brief(issues[n]["unlocks"])
 
     # Business line, level 2 (label is level 1, set above): the PRD/design umbrella.
     # An umbrella issue heads its own line; a child inherits its parent umbrella.
@@ -337,10 +358,15 @@ def main():
                               number_of=lambda n: n,
                               soft_after=soft_after)
 
+    def ref_with_owner(m):
+        """'#204(@alice)' — owner inline so a blocked reason tells you who to chase."""
+        owners = issues[m]["assignees"] if m in issues else []
+        return f"#{m}(@{', @'.join(owners)})" if owners else f"#{m}"
+
     def reason(n):
         v = issues[n]
         if v["open_blockers"]:
-            base = f"被 #{', #'.join(map(str, v['open_blockers']))} 阻塞（未完成）"
+            base = f"被 {', '.join(ref_with_owner(b) for b in v['open_blockers'])} 阻塞（未完成）"
         elif v["has_blocked_label"]:
             base = "标记 blocked（依赖未在正文列出具体 issue）"
         elif v["role"] == "ready-for-agent":
@@ -373,6 +399,40 @@ def main():
         issues[n]["reason"] = reason(n)
         issues[n]["order_basis"] = order_basis(n)
 
+    # Personal view: the board seen from the viewer's seat. Only built when we
+    # know who's looking; everything in it is derived from fields above, ordered
+    # by the same recommended order so "next_for_me" agrees with the global plan.
+    my_board = None
+    if viewer:
+        mine = [n for n in order if issues[n]["mine"]]
+        mine_ready = [n for n in mine if issues[n]["ready_now"]]
+        mine_blocked = [n for n in mine if issues[n]["is_blocked"]]
+        claimable = [n for n in order
+                     if issues[n]["ready_now"] and not issues[n]["assignees"]
+                     and issues[n]["kind"] == "task"]
+        nxt = (mine_ready or claimable or [None])[0]
+        my_board = {
+            "viewer": viewer,
+            "mine": brief(mine),
+            "mine_ready": mine_ready,
+            "mine_blocked": [
+                {"number": n, "title": issues[n]["title"],
+                 "blockers": issues[n]["open_blockers_detail"],
+                 "blocker_unspecified": issues[n]["has_blocked_label"] and not issues[n]["open_blockers"]}
+                for n in mine_blocked
+            ],
+            # downstream: people whose issues wait on something of mine
+            "waiting_on_me": [
+                {"number": n, "title": issues[n]["title"], "unlocks": issues[n]["unlocks_detail"]}
+                for n in mine if issues[n]["unlocks"]
+            ],
+            "claimable": brief(claimable),
+            "next_for_me": None if nxt is None else {
+                "number": nxt, "title": issues[nxt]["title"],
+                "basis": "assigned" if nxt in mine_ready else "claimable",
+            },
+        }
+
     warnings = []
     if cycle:
         warnings.append(f"检测到依赖环，涉及 #{', #'.join(map(str, sorted(cycle)))}——无法给出有效顺序，需人工拆环")
@@ -383,6 +443,8 @@ def main():
     board = {
         "repo": args.repo or "(cwd auto-detect)",
         "repo_slug": repo_slug,
+        "viewer": viewer,
+        "my_board": my_board,
         "state": args.state,
         "total_open": len(raw_issues),
         "label_map": label_map,
