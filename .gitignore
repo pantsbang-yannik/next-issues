@@ -1,4 +1,32 @@
+# macOS
 .DS_Store
-*.pyc
+.AppleDouble
+Icon?
+
+# Python
 __pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Editors / IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Packaged skill (distributed via GitHub Releases, not committed)
+*.skill
+
+# Generated board output (when running the scripts inside the repo)
+/board*.json
+/annotations*.json
+/next-issue-board.html
+/*.local.html
+
+# skill-creator eval runs / workspaces
 next-issue-workspace/
+evals/iteration-*/
+evals/feedback.json
