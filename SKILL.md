@@ -176,14 +176,21 @@ cluster.
 #### 2b. Render and open the map
 
 ```bash
-python3 "<this-skill-dir>/scripts/issue_board.py" > /tmp/issue_board.json
-# write /tmp/issue_annotations.json per 2a
+mkdir -p ~/.next-issue
+python3 "<this-skill-dir>/scripts/issue_board.py" > ~/.next-issue/board.json
+# write ~/.next-issue/annotations.json per 2a
 python3 "<this-skill-dir>/scripts/render_board.py" \
-  --board /tmp/issue_board.json \
-  --annotations /tmp/issue_annotations.json \
-  --out /tmp/next-issue-board.html
-open /tmp/next-issue-board.html      # macOS; use xdg-open on Linux
+  --board ~/.next-issue/board.json \
+  --annotations ~/.next-issue/annotations.json
+open ~/.next-issue/<owner>-<repo>.html      # the render step prints the exact path; xdg-open on Linux
 ```
+
+Everything lands in `~/.next-issue/`, **never inside the project** — the skill
+runs in other people's repos, and a board artifact must not show up in their
+`git status` or need a .gitignore entry. The renderer defaults `--out` to
+`~/.next-issue/<owner>-<repo>.html` (per-repo, so two projects' boards don't
+overwrite each other; it prints the path it wrote). Don't override `--out` into
+the project tree unless the user explicitly asks for the file there.
 
 The HTML is self-contained (no network) and opens anywhere — the user can keep or
 share it. It renders as a **workflow-style path graph on an infinite canvas**, not

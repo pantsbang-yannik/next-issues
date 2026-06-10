@@ -48,17 +48,19 @@ Three layers, splitting deterministic work from judgement:
 
 ```bash
 # 1. pull & rank
-python3 scripts/issue_board.py > /tmp/board.json          # or --repo OWNER/NAME
+mkdir -p ~/.next-issue
+python3 scripts/issue_board.py > ~/.next-issue/board.json   # or --repo OWNER/NAME
 
-# 2. (the model writes /tmp/annotations.json: business lines + unlock copy + headline)
+# 2. (the model writes ~/.next-issue/annotations.json: business lines + unlock copy + headline)
 
-# 3. render the map
+# 3. render the map — defaults to ~/.next-issue/<owner>-<repo>.html and prints the path
 python3 scripts/render_board.py \
-  --board /tmp/board.json \
-  --annotations /tmp/annotations.json \
-  --out /tmp/next-issue-board.html
-open /tmp/next-issue-board.html            # xdg-open on Linux
+  --board ~/.next-issue/board.json \
+  --annotations ~/.next-issue/annotations.json
+open ~/.next-issue/<owner>-<repo>.html      # xdg-open on Linux
 ```
+
+Everything stays in `~/.next-issue/` — nothing is written into the project you run it in, so there's no stray file to `.gitignore` and no noise in `git status`. Boards are named per repo, so different projects never overwrite each other. (`--out` overrides if you do want it elsewhere.)
 
 Annotations are optional — without them you still get a valid map grouped by label / PRD; with them you get the full unlock story.
 

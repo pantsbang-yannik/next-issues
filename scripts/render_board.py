@@ -19,10 +19,21 @@ import argparse
 import datetime
 import json
 import os
+import re
 import sys
 
 STATUS_ORDER = {"ready": 0, "todo": 1, "blocked": 2}
 LANE_TAG_FALLBACK = "ungrouped"
+OUT_DIR = os.path.expanduser("~/.next-issue")
+
+
+def default_out(board):
+    """Per-repo path under ~/.next-issue/ — outside any project tree (nothing to
+    .gitignore, survives reboots) and namespaced by repo so two projects' boards
+    never overwrite each other."""
+    slug = board.get("repo_slug") or "board"
+    name = re.sub(r"[^A-Za-z0-9._-]+", "-", slug).strip("-") or "board"
+    return os.path.join(OUT_DIR, f"{name}.html")
 
 
 def issue_status(it):
@@ -159,7 +170,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--board", default="-", help="board JSON from issue_board.py (file, or '-'/omit for stdin)")
     ap.add_argument("--annotations", default=None, help="optional AI annotations JSON (business lines + unlock copy)")
-    ap.add_argument("--out", default="/tmp/next-issue-board.html")
+    ap.add_argument("--out", default=None,
+                    help="output HTML path (default: ~/.next-issue/<owner>-<repo>.html)")
     ap.add_argument("--template", default=None, help="override template path")
     ap.add_argument("--date", default=None, help="generated-at stamp (default: today)")
     args = ap.parse_args()
@@ -168,6 +180,10 @@ def main():
     if "error" in board:
         print(json.dumps(board, ensure_ascii=False)); sys.exit(1)
     ann = load_json(args.annotations) if args.annotations else None
+
+    if not args.out:
+        args.out = default_out(board)
+    os.makedirs(os.path.dirname(os.path.abspath(args.out)), exist_ok=True)
 
     template = args.template or os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "assets", "board_template.html")
