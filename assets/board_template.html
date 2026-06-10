@@ -77,9 +77,17 @@
   .n-rows .k{color:var(--kicker);font-size:9.5px;letter-spacing:.04em;white-space:nowrap}
   .n-rows .v{display:flex;flex-wrap:wrap;gap:4px 5px;align-items:center}
   .tag{font-size:10px;line-height:1.6;padding:0 7px;border-radius:5px;background:var(--chip-bg);color:var(--ink-2);border:1px solid var(--card-bd)}
+  .tag.own{font-family:var(--mono)}
+  .tag.own.me{background:var(--accent-soft);color:var(--accent);border-color:transparent;font-weight:650}
   .ref{font-family:var(--mono);font-size:10.5px;font-weight:600;padding:0 5px;border-radius:5px}
   .ref.lk{background:var(--rd-bg);color:var(--rd-fg)} .ref.bk{background:var(--bl-bg);color:var(--bl-fg)}
   .ref.sf{background:var(--td-bg);color:var(--td-fg)}
+
+  /* the viewer's own issues */
+  .node.mine{border-color:var(--accent)}
+  .me-badge{font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#fff;background:var(--accent);border-radius:4px;padding:1px 5px}
+  body.mineonly .node.off{opacity:.12;pointer-events:none}
+  .toolbar button.on{background:var(--accent-soft);color:var(--accent)}
 
   /* hover highlight */
   body.lit .node:not(.hot){opacity:.3}
@@ -169,6 +177,7 @@
   <div class="hud toolbar">
     <button id="theme" title="Theme">☾</button>
     <button id="lang" title="Language">中</button>
+    <button class="wide" id="mine" title="Only my issues and their chain"></button>
     <span class="sep"></span>
     <button id="zout" title="Zoom out">–</button><span class="zlabel" id="zlabel">100%</span>
     <button id="zin" title="Zoom in">+</button><span class="sep"></span>
@@ -185,14 +194,16 @@ const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&l
 const I18N = {
   en: {routeHdr:"AI-recommended route", lines:"Business lines", linesSub:"delivers · progress · start",
     open:"open", st:{ready:"Ready",blocked:"Blocked",todo:"Not ready",prog:"In progress"},
-    umbrella:"epic", rowLabels:"Labels", rowUnlocks:"Unlocks", rowBlocked:"Blocked by", rowSoft:"Soft-after",
+    umbrella:"epic", rowLabels:"Labels", rowOwner:"Assignee", rowUnlocks:"Unlocks", rowBlocked:"Blocked by", rowSoft:"Soft-after",
+    mineTag:"me", mineBtn:"Mine",
     delivers:"Delivers", start:"Start", items:"items", noUnlock:"(no unlock note)", startHere:"▶ start here",
     entReady:"ready now", entProg:"in progress", entWaitPre:"🔒 needs ", entWaitSuf:"", entUpstream:"🔒 waiting on upstream", entTriage:"needs triage",
     legHard:"hard dep · unlocks", legSoft:"soft-sync", labelMap:"label map: ", fit:"Fit", reset:"Reset",
     hint:'Hold <kbd>Space</kbd> + drag to pan · scroll to zoom · drag empty space · hover a node for its path · hover a line to highlight it'},
   zh: {routeHdr:"AI 推荐推进路线", lines:"业务线", linesSub:"交付 · 进度 · 起点",
     open:"open", st:{ready:"可推进",blocked:"被阻塞",todo:"未就绪",prog:"进行中"},
-    umbrella:"伞", rowLabels:"标签", rowUnlocks:"解锁", rowBlocked:"阻塞", rowSoft:"软等",
+    umbrella:"伞", rowLabels:"标签", rowOwner:"负责人", rowUnlocks:"解锁", rowBlocked:"阻塞", rowSoft:"软等",
+    mineTag:"我", mineBtn:"只看我的",
     delivers:"交付", start:"起点", items:"项", noUnlock:"未标注", startHere:"▶ 先做",
     entReady:"可直接推进", entProg:"进行中", entWaitPre:"🔒 待 ", entWaitSuf:" 解锁", entUpstream:"🔒 待上游解锁", entTriage:"待 triage",
     legHard:"硬依赖 · 完成→解锁", legSoft:"软同步", labelMap:"label 映射：", fit:"适应", reset:"复位",
@@ -222,11 +233,12 @@ function nodeHTML(it, laneName, color){
   const refs=(arr,cls)=>arr.map(n=>`<span class="ref ${cls}">#${n}</span>`).join("");
   const rows=[];
   if(it.labels&&it.labels.length) rows.push(`<span class="k">${t.rowLabels}</span><span class="v">${it.labels.map(l=>`<span class="tag">${esc(l)}</span>`).join("")}</span>`);
+  if(it.assignees&&it.assignees.length) rows.push(`<span class="k">${t.rowOwner}</span><span class="v">${it.assignees.map(a=>`<span class="tag own${a===BOARD.viewer?" me":""}">@${esc(a)}</span>`).join("")}</span>`);
   if(it.unlocks&&it.unlocks.length) rows.push(`<span class="k">${t.rowUnlocks}</span><span class="v">${refs(it.unlocks,"lk")}</span>`);
   if(it.blockers&&it.blockers.length) rows.push(`<span class="k">${t.rowBlocked}</span><span class="v">${refs(it.blockers,"bk")}</span>`);
   if(it.soft&&it.soft.length) rows.push(`<span class="k">${t.rowSoft}</span><span class="v">${refs(it.soft,"sf")}</span>`);
   const rowsHTML = rows.length?`<div class="n-rows">${rows.join("")}</div>`:"";
-  return `<div class="node ${st.c}${blk}" id="node-${it.number}" data-n="${it.number}" style="--lc:${color}">
+  return `<div class="node ${st.c}${blk}${it.mine?" mine":""}" id="node-${it.number}" data-n="${it.number}" style="--lc:${color}">
     <span class="nub l"></span><span class="nub r"></span>
     <div class="n-head">
       <div class="n-cat"><span class="sw"></span><span class="nm">${esc(laneName)}</span></div>
@@ -234,7 +246,7 @@ function nodeHTML(it, laneName, color){
     </div>
     <div class="n-div"></div>
     <div class="n-body">
-      <div class="n-id"><span class="n-num">#${it.number}</span>${kind}</div>
+      <div class="n-id"><span class="n-num">#${it.number}</span>${kind}${it.mine?`<span class="me-badge">${t.mineTag}</span>`:""}</div>
       <div class="n-title">${esc(it.title)}</div>
       ${rowsHTML}
     </div></div>`;
@@ -348,7 +360,8 @@ function dimEdgesExcept(idxs){edgeEls.forEach((e,idx)=>{
   if(idxs.has(idx)){e.el.setAttribute("stroke","var(--accent)");e.el.setAttribute("opacity","1");e.el.setAttribute("stroke-width","2.1");e.el.setAttribute("marker-end","url(#ah-h)");}
   else e.el.setAttribute("opacity",".12");});}
 function resetEdges(){edgeEls.forEach(e=>{e.el.setAttribute("stroke",e.soft?"var(--td-fg)":"var(--line)");
-  e.el.setAttribute("opacity",e.soft?".7":"1");e.el.setAttribute("stroke-width",e.soft?"1.6":"1.7");e.el.setAttribute("marker-end",e.soft?"url(#ah-s)":"url(#ah)");});}
+  e.el.setAttribute("opacity",e.soft?".7":"1");e.el.setAttribute("stroke-width",e.soft?"1.6":"1.7");e.el.setAttribute("marker-end",e.soft?"url(#ah-s)":"url(#ah)");
+  if(MINESET && !(MINESET.has(e.from)&&MINESET.has(e.to))) e.el.setAttribute("opacity",".06");});}
 function clearHot(){document.body.classList.remove("lit");for(const m in nodeEls)nodeEls[m].classList.remove("hot");resetEdges();}
 function hoverNode(n){document.body.classList.add("lit");const hot=new Set([n]),ei=new Set(adj[n]||[]);
   ei.forEach(idx=>{hot.add(edgeEls[idx].from);hot.add(edgeEls[idx].to);}); dimEdgesExcept(ei);
@@ -366,11 +379,30 @@ function wire(){for(const n in nodeEls){const num=+n;nodeEls[n].addEventListener
     c.addEventListener("mouseenter",()=>hoverNode(n)); c.addEventListener("mouseleave",clearHot);
     c.addEventListener("click",()=>panTo(n));});}
 
+/* ── "Mine" focus: my issues + their full upstream/downstream chain ─ */
+let MINE=false, MINESET=null;
+function computeMineSet(){
+  const set=new Set(); const seeds=[];
+  for(const n in issueByNum) if(issueByNum[n].mine) seeds.push(+n);
+  if(!seeds.length) return set;
+  const up={}, down={};
+  (BOARD.edges||[]).forEach(e=>{(up[e.to]=up[e.to]||[]).push(e.from);(down[e.from]=down[e.from]||[]).push(e.to);});
+  const walk=m=>{const q=[...seeds];while(q.length){const n=q.pop();(m[n]||[]).forEach(x=>{if(!set.has(x)){set.add(x);q.push(x);}});}};
+  seeds.forEach(n=>set.add(n)); walk(up); walk(down);
+  return set;
+}
+function applyMine(){
+  MINESET = MINE ? computeMineSet() : null;
+  document.body.classList.toggle("mineonly", MINE);
+  for(const n in nodeEls) nodeEls[n].classList.toggle("off", !!(MINESET && !MINESET.has(+n)));
+  resetEdges(); chromeUI();
+}
+
 /* ── Build / rebuild (rebuild on language switch) ─────────────── */
 function build(){
   nodeEls={}; box={}; lineOf={}; colorOf={}; issueByNum={}; lineNodes={}; edgeEls=[]; adj={};
   stage.querySelectorAll(".node").forEach(n=>n.remove());
-  render(); layout(); drawEdges(); wire(); chromeUI();
+  render(); layout(); drawEdges(); wire(); applyMine();
 }
 
 /* ── Pan & zoom ───────────────────────────────────────────────── */
@@ -393,11 +425,16 @@ function chromeUI(){
   document.getElementById("lang").textContent = LANG==="en" ? "中" : "EN";
   document.getElementById("fit").textContent = L().fit;
   document.getElementById("reset").textContent = L().reset;
+  const mb=document.getElementById("mine");
+  const anyMine=Object.values(issueByNum).some(it=>it.mine);
+  mb.style.display=(BOARD.viewer&&anyMine)?"":"none";
+  mb.textContent=L().mineBtn; mb.classList.toggle("on",MINE);
 }
 function save(k,v){try{localStorage.setItem(k,v)}catch(e){}}
 document.getElementById("theme").onclick=()=>{document.body.classList.toggle("dark");
   save("ni_theme",document.body.classList.contains("dark")?"dark":"light"); chromeUI();};
 document.getElementById("lang").onclick=()=>{LANG=LANG==="en"?"zh":"en"; save("ni_lang",LANG); build();};
+document.getElementById("mine").onclick=()=>{MINE=!MINE; save("ni_mine",MINE?"1":"0"); applyMine();};
 
 let space=false,panning=false,sx=0,sy=0,ox=0,oy=0;
 addEventListener("keydown",e=>{if(e.code==="Space"&&!space&&!/INPUT|TEXTAREA/.test(e.target.tagName)){space=true;vp.classList.add("grab");e.preventDefault();}});
@@ -409,7 +446,8 @@ vp.addEventListener("wheel",e=>{e.preventDefault();zoomAt(e.clientX,e.clientY,st
 
 /* ── Boot ─────────────────────────────────────────────────────── */
 try{ if(localStorage.getItem("ni_theme")==="dark") document.body.classList.add("dark");
-     const l=localStorage.getItem("ni_lang"); if(l==="zh"||l==="en") LANG=l; }catch(e){}
+     const l=localStorage.getItem("ni_lang"); if(l==="zh"||l==="en") LANG=l;
+     if(localStorage.getItem("ni_mine")==="1") MINE=true; }catch(e){}
 build();
 fit();
 setTimeout(()=>{const h=document.getElementById("hint");if(h)h.style.opacity="0";},6500);

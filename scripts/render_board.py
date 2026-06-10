@@ -95,6 +95,8 @@ def build_model(board, ann, generated_at):
             "role": it.get("role"),
             "kind": it.get("kind", "task"),
             "labels": it.get("labels", []),
+            "assignees": it.get("assignees", []),
+            "mine": it.get("mine", False),
             "in_progress": it.get("in_progress", False),
             "unlocks": it.get("unlocks", []),
             "blockers": it.get("open_blockers", []),
@@ -140,6 +142,7 @@ def build_model(board, ann, generated_at):
 
     return {
         "repo": board.get("repo_slug") or board.get("repo") or "",
+        "viewer": board.get("viewer"),
         "total_open": board.get("total_open"),
         "generated_at": generated_at,
         "label_map_source": board.get("label_map_source"),

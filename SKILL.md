@@ -10,10 +10,13 @@ description: >-
   each chain ships once completed. Use WHENEVER the user asks what to work on
   next, which issue to pick up, to list / prioritize / sequence the backlog, for
   a dependency analysis, to visualize / draw / map the issues, their
-  relationships, business lines, or what completing a chain unlocks,
+  relationships, business lines, or what completing a chain unlocks, anything
+  about *their own* issues ("my issues", who's blocking me, who's waiting on me,
+  "我负责的 / 分给我的 / 谁在阻塞我 / 谁在等我"),
   "下一个做什么 / 排一下 issue 优先级 / 接下来推进哪个 / 这个 issue 能直接做吗 / 把 issue 关系和业务线画出来 / 生成依赖图 / 看板",
   or is about to start an issue and needs to know if it's ready — even without
-  the word "issue". Reads triage-labels.md as the label SSOT.
+  the word "issue". Detects the local `gh` login to build the personal view.
+  Reads triage-labels.md as the label SSOT.
 ---
 
 # Next Issue
@@ -84,6 +87,26 @@ by hand using the model below.
 - `label_map_source` — which triage-labels.md it read, or that it used defaults.
 - `cycles` / `warnings` — surface these prominently if non-empty.
 
+**The personal view** — the script asks `gh api user` who is looking (top-level
+`viewer`; null if it can't tell, `--viewer LOGIN` to override, `--viewer ''` to
+disable) and builds `my_board` from it:
+
+- per-issue `mine` — the viewer is among its assignees.
+- `open_blockers_detail` / `unlocks_detail` — the upstream/downstream refs
+  echoed *with titles and assignees*, so you can say "被 #204 阻塞——那是
+  @alice 的" or "你做完 #202 就解锁了 @carol 的 #205" without extra `gh` calls.
+- `my_board.mine` / `mine_ready` / `mine_blocked` — the viewer's issues in
+  recommended order; each blocked one carries its `blockers` (with owners) and a
+  `blocker_unspecified` flag for label-only blocks.
+- `my_board.waiting_on_me` — the downstream view: whose issues are waiting on
+  something of mine. This is the "别人在等你" signal — surface it, it often
+  outranks the viewer's own preference for what to do next.
+- `my_board.claimable` — ready, *unassigned* `task` issues, offered as 可认领
+  candidates (small teams routinely leave issues unassigned; don't treat
+  unassigned as "not mine to touch").
+- `my_board.next_for_me` — first of `mine_ready`, else first claimable, with a
+  `basis` of `assigned` / `claimable` so you can phrase it honestly.
+
 Fields that feed the **visual board** in step 2:
 
 - `unlocks` — open issues this one *hard-unblocks* (the reverse of their
@@ -93,7 +116,9 @@ Fields that feed the **visual board** in step 2:
   feature line an issue belongs to: a label prefix (`area:` / `module:` /
   `业务线:` …, source `label`) if present, else its PRD/design umbrella (source
   `prd`), else `null`. **A `null` is your cue to cluster it yourself** in step 2.
-- `assignees` / `in_progress` — someone's already on it; the map flags it 进行中.
+- `assignees` / `in_progress` — someone's already on it; the map flags it 进行中,
+  shows the assignees as `@name` chips, and marks the viewer's own cards (`mine`)
+  with an accent border + 我 badge and a "只看我的" toolbar filter.
 - `repo_slug` — `OWNER/NAME`, used to build the card→GitHub links.
 
 ### 2. Present the board — a visual map first, a terminal summary second
@@ -182,6 +207,11 @@ a list:
 - **Canvas**: pan by holding space + drag (or drag empty space), wheel to zoom,
   with 适应 / 复位 buttons. Hover a node to light up its upstream+downstream path;
   hover a business line in the panel to highlight that whole line.
+- **Person-aware**: cards show their assignees as `@name` chips; the viewer's own
+  cards get an accent border and a 我 badge, and a **只看我的** toolbar button
+  dims everything except the viewer's issues plus their full upstream/downstream
+  chain (the button only appears when the board knows the viewer and they have
+  assigned issues).
 
 The colour discipline is deliberate: status is the only saturated colour (pill +
 the progress bar + the 解锁/阻塞 refs), business lines use one quiet dot each, and
@@ -195,6 +225,14 @@ with what's actionable, point at the map, and stop:
 
 ```markdown
 # Issue 看板 · <repo> · open <N>
+
+## 👤 我的（@alice）
+| # | 标题 | 状态 | 上游 / 下游 |
+|---|------|------|--------------|
+| 204 | Rebuild checkout as one-page flow | ⛔ 被阻塞 | 等 #202(@bob)、#203(无人)；完成后解锁 @carol 的 #205 |
+| 212 | New search results UI | 🟢 可推进 | 无依赖 |
+> 下一个：**#212**（你名下 ready 中顺序最靠前）；可认领：#210（ready、无人负责）。
+> @carol 的 #205 在等你的 #204 —— 它卡在 @bob 的 #202 上，先去对齐 #202 的进度。
 
 ## 🟢 可直接推进（已规约、依赖已清）
 | # | 标题 | label | 备注 |
@@ -223,6 +261,16 @@ with what's actionable, point at the map, and stop:
 ## ⚠️ 注意
 - <循环依赖 / wontfix 排除 / 用了默认 label 映射 等 warnings>
 ```
+
+**The 👤 我的 section** comes from `my_board` and is what turns the board from
+"团队全貌" into "我现在该干嘛": the viewer's issues, *who owns each upstream
+blocker* (so a blocked issue becomes "去找 @bob 对齐 #202" instead of a dead
+end), and *who is waiting downstream* (someone waiting on you usually outranks
+your own pick). Include it whenever `my_board` is non-null and has anything to
+say; skip it silently when `viewer` is null, the viewer has no issues and
+nothing is claimable, or every issue belongs to the viewer anyway (solo repo —
+a personal section that repeats the whole board is noise). Unassigned ready
+issues are 可认领 candidates, not someone else's turf.
 
 **Umbrella items (`kind` = prd / design):** don't recommend "implementing" a PRD
 or a design issue. Present it as the header that groups its children (issues
