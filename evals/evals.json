@@ -62,6 +62,21 @@
         "终端摘要简短、指向地图，不重贴长报告",
         "停在可视化，不实现 / 不改任何 issue"
       ]
+    },
+    {
+      "id": 4,
+      "name": "terminal-only-opt-out",
+      "prompt": "不用画图，直接在终端里帮我把现在的 open issue 按优先级和依赖排一下，告诉我接下来推进哪个。",
+      "expected_output": "识别用户已明确拒绝可视化看板：不再用 AskUserQuestion 追问、不调用 render_board.py、不生成/打开任何 HTML；运行 issue_board.py 后直接给完整终端摘要（三分组 + 推荐执行顺序，理由写全，不指向不存在的地图）；不实现任何 issue。",
+      "files": [],
+      "expectations": [
+        "不调用 render_board.py、不生成或打开 HTML 文件",
+        "不就『是否生成看板』重复追问（用户已在请求里拒绝）",
+        "运行 issue_board.py 取实时 open issues",
+        "终端摘要完整：可推进/被阻塞/未就绪三组 + 推荐执行顺序（理由完整）",
+        "摘要中不引用/指向 HTML 地图",
+        "停在建议层，不实现 / 不改任何 issue"
+      ]
     }
   ]
 }
