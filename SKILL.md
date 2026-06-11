@@ -42,6 +42,32 @@ that invoking it surveys and sequences, never silently starts changing code.
 
 ## Workflow
 
+### 0. Ask once: visual board, or terminal-only?
+
+Rendering the HTML map costs a round of clustering + annotation work and pops a
+browser window — some users just want the ranked list in the terminal. So before
+you start, ask with **AskUserQuestion**:
+
+- 问题：「要生成可视化 HTML 看板吗？」
+- 选项：**生成看板（推荐）** — 业务线分组 + 依赖连线 + 解锁地图，自动在浏览器打开；
+  **只要终端摘要** — 跳过 HTML，直接给排序和分组结果。
+
+Two cases where you should **not** ask:
+
+- The user's request already answers it. If they explicitly asked for the map
+  （"画出来 / 生成依赖图 / 看板 / visualize"）, asking again is noise — just render;
+  if they explicitly declined it（"不用画图 / 终端里给我就行"）, skip rendering
+  without asking. Likewise, if they only named a specific issue to start
+  （"#204 能直接做吗"）, that's the clarity gate (step 3); no board is being
+  produced, nothing to ask.
+- You can't ask. In a non-interactive run (subagent, headless) where
+  AskUserQuestion isn't available, default to **generating** the board — that's
+  the skill's normal behavior.
+
+If the user picks 只要终端摘要, skip 2a and 2b entirely and go straight to 2c —
+the terminal summary is then the *only* artifact, so don't abbreviate it on the
+assumption that "the HTML carries the detail".
+
 ### 1. Pull and rank the board
 
 Run the bundled script — it lives next to this file and only needs `python3`
@@ -127,6 +153,7 @@ The payoff the user actually wants is a **picture they can read at a glance**:
 which business line each issue belongs to, what blocks what, and — by completing
 a given line — which feature ships. So the primary artifact of this step is an
 HTML "business-line & unlock map"; the terminal summary is the quick companion.
+(If the user chose 只要终端摘要 in step 0, skip 2a/2b and jump to 2c.)
 
 #### 2a. Cluster business lines and write the unlock copy
 
@@ -227,8 +254,11 @@ into confetti. If you adjust the template, preserve that.
 
 #### 2c. Terminal summary
 
-The HTML carries the detail, so keep the terminal note short and scannable — lead
-with what's actionable, point at the map, and stop:
+When the HTML map was rendered, it carries the detail — keep the terminal note
+short and scannable: lead with what's actionable, point at the map, and stop.
+When the user opted out of the map in step 0, this summary is everything they
+get — same structure, but don't point at a map that doesn't exist, and keep the
+推荐执行顺序 reasons full rather than telegraphic.
 
 ```markdown
 # Issue 看板 · <repo> · open <N>
