@@ -158,8 +158,8 @@ HTML "business-line & unlock map"; the terminal summary is the quick companion.
 #### 2a. Cluster business lines and write the unlock copy
 
 The script already grouped every issue that carried a signal (a `business_line`
-from a label prefix or a PRD/design umbrella). Two things are left that only you
-can do, and they're what make the map worth looking at:
+from a label prefix or a PRD/design umbrella). Three things are left that only
+you can do, and they're what make the map worth looking at:
 
 1. **Cluster the leftovers.** Every issue with `business_line: null` needs a home.
    Read its title/body and group by the *feature it serves* — an epic or ADR
@@ -170,8 +170,15 @@ can do, and they're what make the map worth looking at:
 2. **Write the "complete this line → this ships" copy.** This is the sentence the
    whole picture exists to deliver, and the script can't write it — it's a
    judgement about what capability the line unlocks. One line per business line.
+3. **Write back your final execution order.** Whenever you reorder the script's
+   `tie` entries by leverage (step 1 told you to), put the resulting sequence —
+   a plain list of issue numbers — in `recommended_order`. The renderer prefers
+   it over the script's order for the route breadcrumb, the ▶ 先做 badge, and
+   card sorting; without it the map silently falls back to the script's
+   arbitrary tie order and contradicts the order you present in the terminal.
+   Numbers you omit keep their script order after yours.
 
-Put both in an annotations JSON. It's *optional* (without it you still get a valid
+Put all three in an annotations JSON. It's *optional* (without it you still get a valid
 map grouped by label/PRD, just no unlock copy) — but the unlock copy is the point,
 so write it unless the user only wants the bare dependency picture.
 
@@ -179,6 +186,7 @@ so write it unless the user only wants the bare dependency picture.
 {
   "headline": "Start with #202 (cart service) — it's in progress and unblocks the whole checkout chain; #203 can run in parallel.",
   "order_note": "Search (#210→#212) and Notifications (#220→#222) are independent tracks; #205 order-emails softly waits on #221 templates; triage #230 first; #240 is blocked on legal sign-off.",
+  "recommended_order": [202, 203, 210, 220, 204, 211, 221, 212, 222, 205, 206],
   "business_lines": [
     {"name": "Checkout revamp", "issues": [201, 202, 203, 204, 205, 206],
      "unlock": "Ship one-click checkout end to end: cart → payment → confirmation → A/B"},
