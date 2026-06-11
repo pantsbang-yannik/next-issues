@@ -5,9 +5,11 @@ into a self-contained HTML "business-line & unlock map".
 Division of labour, mirroring the skill: the board JSON carries everything
 DETERMINISTIC (status, hard/soft dependency edges, label/PRD business lines);
 the annotations JSON carries the JUDGEMENT the script can't make — the
-"complete this line → these features ship" narrative, the headline, and the
+"complete this line → these features ship" narrative, the headline, the
 business-line grouping for issues that have no label/PRD signal (so the AI's
-semantic clustering lands somewhere). Annotations are OPTIONAL: with none you
+semantic clustering lands somewhere), and an optional recommended_order
+(issue numbers) that overrides the script's order, whose `tie` entries are
+arbitrary. Annotations are OPTIONAL: with none you
 still get a valid board grouped by label/PRD/ungrouped, just without the
 unlock copy.
 
@@ -58,9 +60,22 @@ def build_model(board, ann, generated_at):
     url_of = (lambda n: f"https://github.com/{slug}/issues/{n}") if slug else (lambda n: "")
     by_num = {it["number"]: it for it in board.get("issues", [])}
 
-    # Position of each issue in the recommended execution order (for sorting
-    # cards within a lane and lanes against each other). Missing => last.
-    order_pos = {e["number"]: i for i, e in enumerate(board.get("recommended_order", []))}
+    # The execution order shown on the map. The script's recommended_order is
+    # deterministic but its `tie` entries are arbitrary (issue-number fallback);
+    # the skill tells the AI to reorder those by leverage, and
+    # annotations.recommended_order (a plain list of issue numbers) is where
+    # that judgement lands — so it wins. Numbers it omits keep their script
+    # order, appended after the annotated ones; unknown numbers are harmless
+    # (they never match a rendered card).
+    script_order = [e["number"] for e in board.get("recommended_order", [])]
+    ann_order = [n for n in ((ann or {}).get("recommended_order") or [])
+                 if isinstance(n, int)]
+    exec_order = (ann_order + [n for n in script_order if n not in ann_order]
+                  if ann_order else script_order)
+
+    # Position of each issue in that order (for sorting cards within a lane
+    # and lanes against each other). Missing => last.
+    order_pos = {n: i for i, n in enumerate(exec_order)}
     pos = lambda n: order_pos.get(n, 10**6)
 
     # Lane assignment from annotations takes precedence (this is where AI
@@ -146,10 +161,9 @@ def build_model(board, ann, generated_at):
             if m in rendered_nums and ("s", n, m) not in seen:
                 seen.add(("s", n, m)); edges.append({"from": n, "to": m, "type": "soft"})
 
-    # the AI's recommended execution order, restricted to rendered issues —
-    # drives the route breadcrumb, the "先做" flag, and within-column ordering
-    rec_order = [{"number": e["number"]} for e in board.get("recommended_order", [])
-                 if e.get("number") in rendered_nums]
+    # the effective execution order, restricted to rendered issues — drives
+    # the route breadcrumb, the "先做" flag, and within-column ordering
+    rec_order = [{"number": n} for n in exec_order if n in rendered_nums]
 
     return {
         "repo": board.get("repo_slug") or board.get("repo") or "",
